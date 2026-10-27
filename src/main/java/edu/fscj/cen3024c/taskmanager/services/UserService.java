@@ -15,6 +15,10 @@ import edu.fscj.cen3024c.taskmanager.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -56,16 +60,43 @@ public class UserService {
 
     @Transactional
     public UserDTO createUser(CreateUserRequestDTO request) {
-        User user = new User(request.getUsername(), request.getPassword());
+
+        String salt = generateSalt();
+
+        String hash;
+        try {
+            hash = hashPassword(request.getPassword(), salt);
+        } catch (Exception e) {
+            throw new RuntimeException("Error hashing password", e);
+        }
+
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setSalt(salt);
+        user.setPasswordHash(hash);
+
         User savedUser = userRepository.save(user);
         return convertToDTO(savedUser);
     }
 
     @Transactional
     public UserDTO updateUser(Integer id, UpdateUserRequestDTO request) {
+
         User existingUser = findByIdEntity(id);
         existingUser.setUsername(request.getUsername());
-        existingUser.setPassword(request.getPassword()); // will be hashed in a later module
+
+        // Always re-hash since password is required
+        String salt = generateSalt();
+
+        String hash;
+        try {
+            hash = hashPassword(request.getPassword(), salt);
+        } catch (Exception e) {
+            throw new RuntimeException("Error hashing password", e);
+        }
+
+        existingUser.setSalt(salt);
+        existingUser.setPasswordHash(hash);
 
         User updatedUser = userRepository.save(existingUser);
         return convertToDTO(updatedUser);
@@ -76,6 +107,36 @@ public class UserService {
             throw new UserNotFoundException(id);
         }
         userRepository.deleteById(id);
+    }
+
+    // ===== Password Salt and Hash Methods =====
+
+    private String generateSalt() {
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+        return Base64.getEncoder().encodeToString(salt);
+    }
+
+    private String hashPassword(String password, String salt) throws Exception {
+        byte[] saltBytes = Base64.getDecoder().decode(salt);
+
+        PBEKeySpec spec = new PBEKeySpec(
+                password.toCharArray(),
+                saltBytes,
+                100000,
+                256
+        );
+
+        try {
+            SecretKeyFactory factory =
+                    SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            return Base64.getEncoder().encodeToString(hash);
+        } finally {
+            spec.clearPassword();
+        }
     }
 
     // ===== Entity to DTO Conversion =====

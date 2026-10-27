@@ -6,11 +6,11 @@ INSERT INTO priorities (level) VALUES ('MEDIUM') ON CONFLICT DO NOTHING;
 INSERT INTO priorities (level) VALUES ('HIGH') ON CONFLICT DO NOTHING;
 
 -- Users
-INSERT INTO users (username, password) VALUES ('alice', 'pass123');
-INSERT INTO users (username, password) VALUES ('bob', 'pass123');
-INSERT INTO users (username, password) VALUES ('carol', 'pass123');
-INSERT INTO users (username, password) VALUES ('dave', 'pass123');
-INSERT INTO users (username, password) VALUES ('eve', 'pass123');
+INSERT INTO users (username, salt, password_hash) VALUES ('alice', 'dummySaltAlice', 'dummyHashAlice');
+INSERT INTO users (username, salt, password_hash) VALUES ('bob', 'dummySaltBob', 'dummyHashBob');
+INSERT INTO users (username, salt, password_hash) VALUES ('carol', 'dummySaltCarol', 'dummyHashCarol');
+INSERT INTO users (username, salt, password_hash) VALUES ('dave', 'dummySaltDave', 'dummyHashDave');
+INSERT INTO users (username, salt, password_hash) VALUES ('eve', 'dummySaltEve', 'dummyHashEve');
 
 -- Tasks (round-robin priorities)
 INSERT INTO tasks (title, description, status, due_date, priority_id)
